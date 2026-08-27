@@ -38,40 +38,10 @@ export default function ArtistCollage({ children }) {
   }, []);
 
   useEffect(() => {
-    // images are always in the DOM now (visibility controlled via opacity),
-    // so GSAP can find them on mount regardless of network load timing —
-    // that mismatch was the "GSAP target not found" warnings
+    // Note: the main photo itself has no entrance animation here — Hero's
+    // crossfade preview (a matching image that fades+zooms in as Hero fades
+    // out) already handles the reveal, ending exactly where this one starts.
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        ".collage-main img",
-        { scale: 1.15 },
-        {
-          scale: 1,
-          duration: 1.4,
-          ease: "power2.out",
-          scrollTrigger: {
-            trigger: wrapRef.current,
-            start: "top 90%",
-            toggleActions: "restart none restart reverse",
-          },
-        }
-      );
-
-      gsap.fromTo(
-        ".collage-main",
-        { opacity: 0 },
-        {
-          opacity: 1,
-          duration: 1,
-          ease: "power2.out",
-          scrollTrigger: {
-            trigger: wrapRef.current,
-            start: "top 90%",
-            toggleActions: "restart none restart reverse",
-          },
-        }
-      );
-
       gsap.utils.toArray(".collage-thumb").forEach((thumb, i) => {
         const anim = thumb.dataset.anim;
         gsap.set(thumb, { transformPerspective: 800 });

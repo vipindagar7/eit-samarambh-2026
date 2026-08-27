@@ -12,7 +12,7 @@ const items = [
   { label: "Date", value: config.fest.date, anim: "flip" },
   { label: "Time", value: config.fest.time, anim: "dropBounce" },
   { label: "Venue", value: config.fest.venue, anim: "slideSpin" },
-  { label: "College", value: config.fest.collegeShort, anim: "popZoom" },
+  { label: "Institute", value: config.fest.collegeShort, anim: "popZoom" },
 ];
 
 const animFrom = {

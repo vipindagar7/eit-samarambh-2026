@@ -5,7 +5,6 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import config from "@/lib/config";
 import Blobs from "./Blobs";
-import Magnetic from "./Magnetic";
 import HeroVisual from "./HeroVisual";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -26,6 +25,7 @@ export default function Hero() {
   const blobRef = useRef(null);
   const sectionRef = useRef(null);
   const contentRef = useRef(null);
+  const previewRef = useRef(null);
   // Start with a deterministic value so server-rendered HTML matches the
   // client's first render exactly (Date.now() differs by the time it takes
   // to send the response, causing a 1-second-off hydration mismatch). The
@@ -99,37 +99,58 @@ export default function Hero() {
     // scrolls into the artist section once the zoom finishes. Once released,
     // the section's own height collapses immediately so the artist section
     // sits right where the pin ends, with no dead scroll gap in between.
+    const heroScrollTrigger = {
+      trigger: sectionRef.current,
+      start: "top top",
+      end: "+=55%",
+      scrub: 1,
+      pin: true,
+      pinSpacing: true,
+      onLeave: () => {
+        gsap.set(sectionRef.current, {
+          minHeight: 0,
+          height: 0,
+          paddingTop: 0,
+          paddingBottom: 0,
+          overflow: "hidden",
+        });
+      },
+      onEnterBack: () => {
+        gsap.set(sectionRef.current, {
+          minHeight: "100vh",
+          height: "auto",
+          paddingTop: 20,
+          paddingBottom: 40,
+          overflow: "visible",
+        });
+      },
+    };
+
     gsap.to([contentRef.current, ".scroll-cue"], {
       scale: 1.55,
       opacity: 0,
       ease: "none",
-      scrollTrigger: {
-        trigger: sectionRef.current,
-        start: "top top",
-        end: "+=55%",
-        scrub: 1,
-        pin: true,
-        pinSpacing: true,
-        onLeave: () => {
-          gsap.set(sectionRef.current, {
-            minHeight: 0,
-            height: 0,
-            paddingTop: 0,
-            paddingBottom: 0,
-            overflow: "hidden",
-          });
-        },
-        onEnterBack: () => {
-          gsap.set(sectionRef.current, {
-            minHeight: "100vh",
-            height: "auto",
-            paddingTop: 20,
-            paddingBottom: 40,
-            overflow: "visible",
-          });
-        },
-      },
+      scrollTrigger: heroScrollTrigger,
     });
+
+    // the artist photo crossfades + zooms in on the exact same scroll
+    // range as the hero fading out — same trigger/start/end/scrub values,
+    // so the two are perfectly synced with no gap in between
+    gsap.fromTo(
+      previewRef.current,
+      { opacity: 0, scale: 1.15 },
+      {
+        opacity: 1,
+        scale: 1,
+        ease: "none",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top top",
+          end: "+=55%",
+          scrub: 1,
+        },
+      }
+    );
 
     // GSAP's pin can be measured against a page height that later grows
     // (fonts/images loading in), leaving a leftover transform offset on
@@ -179,6 +200,29 @@ export default function Hero() {
       >
       <div ref={blobRef} style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
         <Blobs variant="hero" />
+      </div>
+
+      <div
+        ref={previewRef}
+        style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 0,
+          overflow: "hidden",
+          opacity: 0,
+        }}
+      >
+        <img
+          src="/images/artist-main.jpg"
+          alt=""
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center 20%",
+            display: "block",
+          }}
+        />
       </div>
 
       <div style={{ position: "relative", zIndex: 1 }}>
@@ -257,10 +301,6 @@ export default function Hero() {
             </div>
           ))}
         </div>
-
-        <Magnetic as="a" href="#register" className="btn" style={{ marginTop: 52 }}>
-          Get your pass →
-        </Magnetic>
       </div>
 
       <div style={{ position: "relative", zIndex: 1 }} className="hero-visual">

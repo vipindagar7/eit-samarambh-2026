@@ -8,8 +8,43 @@ const fieldLabels = {
   name: "Full name",
   email: "Email address",
   phone: "Phone number",
-  college: "College / branch",
+  college: "Institute",
+  passingYear: "12th passing year",
 };
+
+const fieldTypes = {
+  email: "email",
+  phone: "tel",
+  passingYear: "number",
+};
+
+// Per-field format validation, run only after the required-field check passes.
+function validateField(field, value) {
+  const v = value.trim();
+  switch (field) {
+    case "email":
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
+        return "Please enter a valid email address.";
+      }
+      break;
+    case "phone":
+      if (!/^\d{10}$/.test(v)) {
+        return "Please enter a valid 10-digit phone number.";
+      }
+      break;
+    case "passingYear": {
+      const year = Number(v);
+      const now = new Date().getFullYear();
+      if (!Number.isInteger(year) || year < 1990 || year > now + 6) {
+        return "Please enter a valid 12th passing year.";
+      }
+      break;
+    }
+    default:
+      break;
+  }
+  return null;
+}
 
 // The actual form card — reused by the inline Registration section
 // and by the popup modal opened from the surprise ticket.
@@ -29,10 +64,21 @@ export default function RegistrationForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // every field is mandatory
     const missing = config.registration.fields.filter((f) => !values[f]?.trim());
     if (missing.length) {
       setError(`Please fill in ${fieldLabels[missing[0]].toLowerCase()}.`);
       return;
+    }
+
+    // then check each field's format
+    for (const field of config.registration.fields) {
+      const err = validateField(field, values[field]);
+      if (err) {
+        setError(err);
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -155,7 +201,8 @@ export default function RegistrationForm() {
             {config.registration.fields.map((field) => (
               <input
                 key={field}
-                type={field === "email" ? "email" : "text"}
+                type={fieldTypes[field] || "text"}
+                required
                 placeholder={fieldLabels[field] || field}
                 value={values[field] || ""}
                 onChange={(e) => handleChange(field, e.target.value)}

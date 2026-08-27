@@ -51,7 +51,7 @@ export default function Header() {
       }}
     >
       <button onClick={() => scrollTo("body")} className="header-logo" style={{ display: "flex", minWidth: 0 }}>
-        <Logo size={124} />
+        <Logo size={224} />
       </button>
 
       <button

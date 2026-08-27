@@ -60,10 +60,6 @@ export default function LuckyTicket() {
     return () => ctx.revert();
   }, []);
 
-  const scrollTo = (selector) => {
-    document.querySelector(selector)?.scrollIntoView({ behavior: "smooth" });
-  };
-
   return (
     <section id="lucky-ticket" ref={ref} className="section" style={{ display: "flex", justifyContent: "center" }}>
       <div
@@ -123,7 +119,7 @@ export default function LuckyTicket() {
               marginBottom: 16,
             }}
           >
-            You've got a free entry ticket
+            You've unlocked an entry pass
           </p>
           <p
             style={{
@@ -147,13 +143,6 @@ export default function LuckyTicket() {
               style={{ background: "var(--bg)", color: "var(--text)" }}
             >
               Claim &amp; register →
-            </button>
-            <button
-              onClick={() => scrollTo("body")}
-              className="btn btn-outline"
-              style={{ borderColor: "rgba(255,255,255,0.5)" }}
-            >
-              Back to home
             </button>
           </div>
         </div>

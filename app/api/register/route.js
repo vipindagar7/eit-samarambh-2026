@@ -22,10 +22,10 @@ export async function POST(request) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { name, email, phone, college } = body || {};
+  const { name, email, phone, college, passingYear } = body || {};
 
-  if (!name || !email) {
-    return NextResponse.json({ error: "Name and email are required" }, { status: 400 });
+  if (!name || !email || !phone || !college || !passingYear) {
+    return NextResponse.json({ error: "All fields are required" }, { status: 400 });
   }
 
   const ticketId = randomUUID().slice(0, 8).toUpperCase();
@@ -33,19 +33,64 @@ export async function POST(request) {
   const registration = {
     ticketId,
     name: String(name).trim(),
-    email: String(email).trim(),
-    phone: phone ? String(phone).trim() : "",
-    college: college ? String(college).trim() : "",
+    email: String(email).trim().toLowerCase(),
+    phone: String(phone).trim(),
+    college: String(college).trim(),
+    passingYear: String(passingYear).trim(),
     createdAt: new Date(),
   };
 
   const results = { mongo: null, sheet: null, email: null };
 
-  // Write to MongoDB
+  // Write to MongoDB — check for an existing registration with the same
+  // email or phone first, and rely on unique indexes as a second guard
+  // against two requests racing each other at the exact same moment.
   try {
     const db = await getDb();
-    const result = await db.collection("registrations").insertOne(registration);
-    results.mongo = { insertedId: result.insertedId };
+    const collection = db.collection("registrations");
+
+    // best-effort — if this fails (e.g. index already exists differently)
+    // the duplicate check below still catches most real-world cases
+    await collection.createIndex({ email: 1 }, { unique: true }).catch(() => { });
+    await collection.createIndex({ phone: 1 }, { unique: true }).catch(() => { });
+
+    const existing = await collection.findOne({
+      $or: [{ email: registration.email }, { phone: registration.phone }],
+    });
+
+    if (existing) {
+      const field = existing.email === registration.email ? "email" : "phone";
+      return NextResponse.json(
+        {
+          error:
+            field === "email"
+              ? "This email is already registered."
+              : "This phone number is already registered.",
+        },
+        { status: 409 }
+      );
+    }
+
+    try {
+      const result = await collection.insertOne(registration);
+      results.mongo = { insertedId: result.insertedId };
+    } catch (err) {
+      // duplicate key error from the unique index (race condition between
+      // two near-simultaneous submissions with the same email/phone)
+      if (err.code === 11000) {
+        const field = err.message.includes("email") ? "email" : "phone";
+        return NextResponse.json(
+          {
+            error:
+              field === "email"
+                ? "This email is already registered."
+                : "This phone number is already registered.",
+          },
+          { status: 409 }
+        );
+      }
+      throw err;
+    }
   } catch (err) {
     console.error("[api/register] MongoDB write failed:", err.message);
     results.mongo = { error: err.message };
@@ -58,6 +103,7 @@ export async function POST(request) {
       registration.email,
       registration.phone,
       registration.college,
+      registration.passingYear,
       registration.ticketId,
       registration.createdAt.toISOString(),
     ];

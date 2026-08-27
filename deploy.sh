@@ -1,55 +1,64 @@
-# Deploying eit-samarambh-2026
+#!/bin/bash
+# ============================================================
+# deploy.sh — pull latest code from GitHub, rebuild, and
+# restart the app + reload nginx.
+#
+# Run this on the VPS, from inside the project folder:
+#   cd /var/www/eit-samarambh-2026
+#   ./deploy.sh
+#
+# First time only:
+#   chmod +x deploy.sh
+# ============================================================
 
-## 1. Push to GitHub (from your local machine, inside the project folder)
+set -e  # stop immediately if any command fails
 
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
+APP_DIR="/var/www/eit-samarambh-2026"
+BRANCH="main"
+PM2_APP_NAME="eit-samarambh-2026"
+NGINX_SITE="starnight.eitfaridabad.co.in"
 
-# Create the repo on GitHub first (github.com/new), name it eit-samarambh-2026
-# Don't initialize it with a README/license — keep it empty, then:
-git remote add origin https://github.com/<your-username>/eit-samarambh-2026.git
-git push -u origin main
-```
+# colors for readable output
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
 
-## 2. First-time server setup (on the server, as a user with sudo)
+log() { echo -e "${GREEN}==>${NC} $1"; }
+warn() { echo -e "${YELLOW}==>${NC} $1"; }
+fail() { echo -e "${RED}==> ERROR:${NC} $1"; exit 1; }
 
-```bash
-sudo mkdir -p /var/www/eit-samarambh-2026
-sudo chown $USER:$USER /var/www/eit-samarambh-2026
-cd /var/www
-git clone https://github.com/<your-username>/eit-samarambh-2026.git eit-samarambh-2026
-cd eit-samarambh-2026
-```
+cd "$APP_DIR" || fail "Could not cd into $APP_DIR"
 
-Create `.env.local` here with production values (MongoDB, Google Sheets,
-SMTP — see `.env.local.example` for the full list). This file is
-gitignored, so it never gets committed — you create it directly on the
-server, once.
+log "Pulling latest code from GitHub ($BRANCH)..."
+git fetch origin "$BRANCH"
+git reset --hard "origin/$BRANCH"
 
-```bash
+log "Installing dependencies..."
 npm install
+
+log "Building the app..."
 npm run build
+
+log "Making sure the logs folder exists..."
 mkdir -p logs
-pm2 start ecosystem.config.js
+
+log "Restarting the app via PM2..."
+if pm2 describe "$PM2_APP_NAME" > /dev/null 2>&1; then
+  pm2 restart "$PM2_APP_NAME"
+else
+  warn "PM2 process '$PM2_APP_NAME' not found — starting it fresh."
+  pm2 start ecosystem.config.js
+fi
 pm2 save
-pm2 startup   # run whatever command this prints
-```
 
-Then set up nginx + SSL as described in the nginx config file's header
-comment (`starnight.eitfaridabad.co.in.conf`).
+log "Checking nginx config..."
+if sudo nginx -t; then
+  log "Reloading nginx..."
+  sudo systemctl reload nginx
+else
+  fail "nginx config test failed — NOT reloading. Fix the config and rerun."
+fi
 
-## 3. Every future update (deploying new changes)
-
-Push from your local machine as usual (`git add`, `commit`, `push`), then
-on the server:
-
-```bash
-cd /var/www/eit-samarambh-2026
-git pull origin main
-npm install        # only needed if package.json changed
-npm run build
-pm2 restart eit-samarambh-2026
-```
+log "Deploy complete. Site: https://$NGINX_SITE"
+pm2 status "$PM2_APP_NAME"
