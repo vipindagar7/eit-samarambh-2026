@@ -86,6 +86,7 @@ export function MusicProvider({ children }) {
   const autoSkipBroken = () => {
     skipAttemptsRef.current += 1;
     if (skipAttemptsRef.current < playlist.length) {
+      resumeRef.current = playing || pendingAutoplayRef.current;
       setTrackIndex((i) => (i + 1) % playlist.length);
     }
   };
@@ -150,6 +151,32 @@ export function MusicProvider({ children }) {
     }
   }, [ready]);
 
+  // Keeps playback going automatically as tracks change — whether that's
+  // the user hitting next/prev, a clip reaching its configured end time,
+  // a full track finishing, or a broken file getting auto-skipped. Without
+  // this, changing the <audio> element's src (which happens on every
+  // track change) pauses it, and nothing ever explicitly called play()
+  // again — which is why only the very first track ever played and
+  // everything after it just sat there loaded-but-paused.
+  const resumeRef = useRef(false);
+
+  useEffect(() => {
+    if (!ready || !resumeRef.current) return;
+    resumeRef.current = false;
+    const audio = audioRef.current;
+    if (!audio || !current) return;
+    audio.currentTime = current.start;
+    audio.muted = false;
+    audio
+      .play()
+      .then(() => setPlaying(true))
+      .catch((err) => {
+        console.warn("[music player] resume play() failed:", err?.name, err?.message);
+        setBlocked(true);
+        setPlaying(false);
+      });
+  }, [ready]);
+
   const togglePlay = () => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -204,11 +231,13 @@ export function MusicProvider({ children }) {
   };
 
   const nextTrack = () => {
+    resumeRef.current = playing;
     setTrackIndex((i) => (i + 1) % playlist.length);
     setProgress(0);
   };
 
   const prevTrack = () => {
+    resumeRef.current = playing;
     setTrackIndex((i) => (i - 1 + playlist.length) % playlist.length);
     setProgress(0);
   };

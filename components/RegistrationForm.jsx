@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import config from "@/lib/config";
 import Magnetic from "./Magnetic";
 
@@ -11,7 +11,7 @@ const studentTypeOptions = ["College Student", "School Student"];
 // so the backend/sheet schema doesn't need two separate shapes.
 function getFieldLabel(field, studentType) {
   if (field === "college") {
-    return studentType === "School Student" ? "School name" : "Institute name";
+    return studentType === "School Student" ? "School name" : "Institute Name";
   }
   if (field === "passingYear") {
     return studentType === "School Student" ? "Class" : "12th passing year";
@@ -65,16 +65,27 @@ function validateField(field, value, studentType) {
   return null;
 }
 
+const MAX_ATTEMPTS_PER_CHANNEL = 2;
+
 // The actual form card — reused by the inline Registration section
 // and by the popup modal opened from the surprise ticket.
 export default function RegistrationForm() {
-  const [submitted, setSubmitted] = useState(false);
+  // "form" -> "otp" -> "done" | "gave-up"
+  const [stage, setStage] = useState("form");
   const [submitting, setSubmitting] = useState(false);
   const [values, setValues] = useState({ studentType: "" });
   const [error, setError] = useState("");
   const [ticketId, setTicketId] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState(null);
   const [results, setResults] = useState(null);
+
+  // OTP step state
+  const [otpToken, setOtpToken] = useState(null);
+  const [otpChannel, setOtpChannel] = useState("mobile"); // "mobile" | "email"
+  const [otpValue, setOtpValue] = useState("");
+  const [secondsLeft, setSecondsLeft] = useState(30);
+  const [attemptsLeft, setAttemptsLeft] = useState({ mobile: MAX_ATTEMPTS_PER_CHANNEL, email: MAX_ATTEMPTS_PER_CHANNEL });
+  const timerRef = useRef(null);
 
   const studentType = values.studentType || "";
 
@@ -83,17 +94,31 @@ export default function RegistrationForm() {
     if (error) setError("");
   };
 
+  const startCountdown = () => {
+    clearInterval(timerRef.current);
+    setSecondsLeft(30);
+    timerRef.current = setInterval(() => {
+      setSecondsLeft((s) => {
+        if (s <= 1) {
+          clearInterval(timerRef.current);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+  };
+
+  useEffect(() => () => clearInterval(timerRef.current), []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // every field is mandatory
     const missing = config.registration.fields.filter((f) => !values[f]?.trim());
     if (missing.length) {
       setError(`Please fill in ${getFieldLabel(missing[0], studentType).toLowerCase()}.`);
       return;
     }
 
-    // then check each field's format
     for (const field of config.registration.fields) {
       const err = validateField(field, values[field], studentType);
       if (err) {
@@ -106,28 +131,119 @@ export default function RegistrationForm() {
     setError("");
 
     try {
-      const res = await fetch(config.registration.formEndpoint, {
+      const res = await fetch("/api/otp/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
-
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         throw new Error(data.error || "Something went wrong. Please try again.");
       }
 
-      setTicketId(data.ticketId || null);
-      setQrDataUrl(data.qrDataUrl || null);
-      setResults(data);
-      setSubmitted(true);
+      setOtpToken(data.token);
+      setOtpChannel("mobile");
+      setAttemptsLeft({ mobile: MAX_ATTEMPTS_PER_CHANNEL - 1, email: MAX_ATTEMPTS_PER_CHANNEL });
+      setStage("otp");
+      startCountdown();
+
+      if (!data.mobileSendOk) {
+        setError("Couldn't send the code by SMS — you can switch to email below.");
+      }
     } catch (err) {
       setError(err.message || "Couldn't submit right now. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    if (!otpValue.trim()) return;
+
+    setSubmitting(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: otpToken, otp: otpValue.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || "Incorrect code. Please try again.");
+      }
+
+      setTicketId(data.ticketId || null);
+      setQrDataUrl(data.qrDataUrl || null);
+      setResults(data);
+      setStage("done");
+      clearInterval(timerRef.current);
+    } catch (err) {
+      setError(err.message || "Couldn't verify right now. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const switchChannelOrResend = async (channel) => {
+    setError("");
+    setOtpValue("");
+
+    const left = attemptsLeft[channel];
+    if (left <= 0) {
+      setError(`No more ${channel} attempts left.`);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/otp/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: otpToken, channel }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || "Couldn't resend the code.");
+      }
+
+      setOtpChannel(channel);
+      setAttemptsLeft((a) => ({ ...a, [channel]: data.attemptsLeft }));
+      startCountdown();
+
+      if (!data.sendOk) {
+        setError(`Couldn't send the code via ${channel}. Please try the other option.`);
+      }
+    } catch (err) {
+      setError(err.message || "Couldn't resend right now.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const giveUp = async () => {
+    setSubmitting(true);
+    try {
+      await fetch("/api/otp/give-up", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: otpToken }),
+      });
+    } catch {
+      // best-effort — show the give-up screen regardless
+    } finally {
+      setSubmitting(false);
+      setStage("gave-up");
+      clearInterval(timerRef.current);
+    }
+  };
+
+  const noAttemptsLeftAnywhere = attemptsLeft.mobile <= 0 && attemptsLeft.email <= 0;
 
   const downloadQr = () => {
     if (!qrDataUrl) return;
@@ -164,7 +280,7 @@ export default function RegistrationForm() {
         border: "1px solid rgba(255,255,255,0.08)",
       }}
     >
-      {submitted ? (
+      {stage === "done" && (
         <div style={{ textAlign: "center", padding: "20px 0" }}>
           <p
             style={{
@@ -200,12 +316,7 @@ export default function RegistrationForm() {
               <img
                 src={qrDataUrl}
                 alt="Entry QR code"
-                style={{
-                  width: 200,
-                  height: 200,
-                  borderRadius: 16,
-                  border: "1px solid rgba(255,255,255,0.1)",
-                }}
+                style={{ width: 200, height: 200, borderRadius: 16, border: "1px solid rgba(255,255,255,0.1)" }}
               />
               <div style={{ marginTop: 16 }}>
                 <Magnetic as="button" onClick={downloadQr} className="btn btn-outline">
@@ -215,7 +326,32 @@ export default function RegistrationForm() {
             </div>
           )}
         </div>
-      ) : (
+      )}
+
+      {stage === "gave-up" && (
+        <div style={{ textAlign: "center", padding: "20px 0" }}>
+          <p
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "1.6rem",
+              marginBottom: 16,
+              color: "var(--accent-2)",
+            }}
+          >
+            We couldn't verify you automatically
+          </p>
+          <p style={{ color: "var(--text-muted)", marginBottom: 16, lineHeight: 1.6 }}>
+            Our team has been notified with your details and will reach out shortly. You can also
+            email us directly at{" "}
+            <a href={`mailto:${config.contact.email}`} style={{ color: "var(--accent-2)" }}>
+              {config.contact.email}
+            </a>
+            .
+          </p>
+        </div>
+      )}
+
+      {stage === "form" && (
         <>
           <p className="eyebrow" style={{ marginBottom: 10 }}>Reserve your spot</p>
           <h2
@@ -225,7 +361,7 @@ export default function RegistrationForm() {
               marginBottom: 32,
             }}
           >
-            Get your E-Pass
+            Get your pass
           </h2>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -259,6 +395,8 @@ export default function RegistrationForm() {
                 );
               }
 
+              if (!studentType) return null;
+
               return (
                 <input
                   key={field}
@@ -272,8 +410,15 @@ export default function RegistrationForm() {
               );
             })}
 
+            {!studentType && (
+              <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
+                Choose one above to continue.
+              </p>
+            )}
+
             {error && <p style={{ color: "var(--accent-1)", fontSize: 13 }}>{error}</p>}
 
+            {studentType && (
             <Magnetic
               as="button"
               type="submit"
@@ -286,9 +431,88 @@ export default function RegistrationForm() {
                 pointerEvents: submitting ? "none" : "auto",
               }}
             >
-              {submitting ? "Submitting…" : "Confirm registration"}
+              {submitting ? "Sending code…" : "Send verification code"}
+            </Magnetic>
+            )}
+          </form>
+        </>
+      )}
+
+      {stage === "otp" && (
+        <>
+          <p className="eyebrow" style={{ marginBottom: 10 }}>Almost there</p>
+          <h2
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(1.6rem, 4vw, 2.2rem)",
+              marginBottom: 12,
+            }}
+          >
+            Enter the code
+          </h2>
+          <p style={{ color: "var(--text-muted)", fontSize: 14, marginBottom: 28 }}>
+            Sent via {otpChannel === "mobile" ? "SMS to your phone" : "email"}.
+          </p>
+
+          <form onSubmit={handleVerify} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              autoFocus
+              placeholder="6-digit code"
+              value={otpValue}
+              onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ""))}
+              style={{ ...inputStyle, textAlign: "center", letterSpacing: "0.5em", fontSize: 20 }}
+            />
+
+            {error && <p style={{ color: "var(--accent-1)", fontSize: 13 }}>{error}</p>}
+
+            <Magnetic
+              as="button"
+              type="submit"
+              className="btn"
+              style={{
+                justifyContent: "center",
+                width: "100%",
+                opacity: submitting || otpValue.length < 6 ? 0.6 : 1,
+                pointerEvents: submitting || otpValue.length < 6 ? "none" : "auto",
+              }}
+            >
+              {submitting ? "Verifying…" : "Verify & confirm"}
             </Magnetic>
           </form>
+
+          <div style={{ marginTop: 20, textAlign: "center", fontSize: 13, color: "var(--text-muted)" }}>
+            {secondsLeft > 0 ? (
+              <p>Didn't get it? You can try another option in {secondsLeft}s.</p>
+            ) : noAttemptsLeftAnywhere ? (
+              <button onClick={giveUp} className="btn btn-outline" style={{ marginTop: 8 }}>
+                I still haven't received it
+              </button>
+            ) : (
+              <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 8 }}>
+                {attemptsLeft.mobile > 0 && (
+                  <button
+                    onClick={() => switchChannelOrResend("mobile")}
+                    className="btn btn-outline"
+                    style={{ fontSize: 13, padding: "10px 18px" }}
+                  >
+                    Resend via SMS
+                  </button>
+                )}
+                {attemptsLeft.email > 0 && (
+                  <button
+                    onClick={() => switchChannelOrResend("email")}
+                    className="btn btn-outline"
+                    style={{ fontSize: 13, padding: "10px 18px" }}
+                  >
+                    Send via email instead
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>
