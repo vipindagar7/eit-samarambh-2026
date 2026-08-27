@@ -94,7 +94,7 @@ export default function EventDetails() {
             >
               {item.label}
             </p>
-            <p style={{ fontSize: "1.3rem", fontWeight: 600 }}>{item.label === 'College' ? <a target="_blank" href="https://maps.app.goo.gl/PtNgjTNXzdMCarTF7">{item.value}</a> : item.value}</p>
+            <p style={{ fontSize: "1.3rem", fontWeight: 600 }}>{item.label === 'Institute' ? <a target="_blank" href="https://maps.app.goo.gl/PtNgjTNXzdMCarTF7">{item.value}</a> : item.value}</p>
           </div>
         ))}
       </div>

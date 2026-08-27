@@ -22,9 +22,9 @@ export async function POST(request) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { name, email, phone, college, passingYear } = body || {};
+  const { studentType, name, email, phone, college, passingYear } = body || {};
 
-  if (!name || !email || !phone || !college || !passingYear) {
+  if (!studentType || !name || !email || !phone || !college || !passingYear) {
     return NextResponse.json({ error: "All fields are required" }, { status: 400 });
   }
 
@@ -32,6 +32,7 @@ export async function POST(request) {
 
   const registration = {
     ticketId,
+    studentType: String(studentType).trim(),
     name: String(name).trim(),
     email: String(email).trim().toLowerCase(),
     phone: String(phone).trim(),
@@ -51,8 +52,8 @@ export async function POST(request) {
 
     // best-effort — if this fails (e.g. index already exists differently)
     // the duplicate check below still catches most real-world cases
-    await collection.createIndex({ email: 1 }, { unique: true }).catch(() => { });
-    await collection.createIndex({ phone: 1 }, { unique: true }).catch(() => { });
+    await collection.createIndex({ email: 1 }, { unique: true }).catch(() => {});
+    await collection.createIndex({ phone: 1 }, { unique: true }).catch(() => {});
 
     const existing = await collection.findOne({
       $or: [{ email: registration.email }, { phone: registration.phone }],
@@ -99,6 +100,7 @@ export async function POST(request) {
   // Append to Google Sheet
   try {
     const row = [
+      registration.studentType,
       registration.name,
       registration.email,
       registration.phone,

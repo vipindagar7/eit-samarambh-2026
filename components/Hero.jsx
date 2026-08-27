@@ -99,14 +99,20 @@ export default function Hero() {
     // scrolls into the artist section once the zoom finishes. Once released,
     // the section's own height collapses immediately so the artist section
     // sits right where the pin ends, with no dead scroll gap in between.
-    const heroScrollTrigger = {
-      trigger: sectionRef.current,
-      start: "top top",
-      end: "+=55%",
-      scrub: 1,
-      pin: true,
-      pinSpacing: true,
-      onLeave: () => {
+    //
+    // Using onUpdate (checked continuously) instead of onLeave/onEnterBack:
+    // those only fire at the exact instant the scroll position crosses the
+    // boundary, and fast or jerky scrolling can skip past that instant
+    // entirely (browser scroll-restoration jumps, momentum scrolling, etc.),
+    // leaving the section stuck collapsed even after scrolling back to the
+    // top — which is exactly the "hero doesn't load" bug. onUpdate re-checks
+    // the actual scroll progress on every frame, so it can't get out of sync.
+    const collapsedRef = { current: false };
+    const syncCollapse = (self) => {
+      const shouldCollapse = self.progress >= 0.999;
+      if (shouldCollapse === collapsedRef.current) return;
+      collapsedRef.current = shouldCollapse;
+      if (shouldCollapse) {
         gsap.set(sectionRef.current, {
           minHeight: 0,
           height: 0,
@@ -114,8 +120,7 @@ export default function Hero() {
           paddingBottom: 0,
           overflow: "hidden",
         });
-      },
-      onEnterBack: () => {
+      } else {
         gsap.set(sectionRef.current, {
           minHeight: "100vh",
           height: "auto",
@@ -123,7 +128,18 @@ export default function Hero() {
           paddingBottom: 40,
           overflow: "visible",
         });
-      },
+      }
+    };
+
+    const heroScrollTrigger = {
+      trigger: sectionRef.current,
+      start: "top top",
+      end: "+=55%",
+      scrub: 1,
+      pin: true,
+      pinSpacing: true,
+      onUpdate: syncCollapse,
+      onRefresh: syncCollapse,
     };
 
     gsap.to([contentRef.current, ".scroll-cue"], {

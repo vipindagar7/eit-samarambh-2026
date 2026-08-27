@@ -4,22 +4,34 @@ import { useState } from "react";
 import config from "@/lib/config";
 import Magnetic from "./Magnetic";
 
-const fieldLabels = {
-  name: "Full name",
-  email: "Email address",
-  phone: "Phone number",
-  college: "Institute",
-  passingYear: "12th passing year",
-};
+const studentTypeOptions = ["College Student", "School Student", "Just Passed School", "Others"];
+
+// Some labels/placeholders change depending on whether "studentType" is
+// School or College — keeping the same field keys (college, passingYear)
+// so the backend/sheet schema doesn't need two separate shapes.
+function getFieldLabel(field, studentType) {
+  if (field === "college") {
+    return studentType === "School Student" ? "School name" : "Institute";
+  }
+  if (field === "passingYear") {
+    return studentType === "School Student" ? "Class" : "12th passing year";
+  }
+  const labels = {
+    studentType: "I am a...",
+    name: "Full name",
+    email: "Email address",
+    phone: "Phone number",
+  };
+  return labels[field] || field;
+}
 
 const fieldTypes = {
   email: "email",
   phone: "tel",
-  passingYear: "number",
 };
 
 // Per-field format validation, run only after the required-field check passes.
-function validateField(field, value) {
+function validateField(field, value, studentType) {
   const v = value.trim();
   switch (field) {
     case "email":
@@ -33,10 +45,17 @@ function validateField(field, value) {
       }
       break;
     case "passingYear": {
-      const year = Number(v);
-      const now = new Date().getFullYear();
-      if (!Number.isInteger(year) || year < 1990 || year > now + 6) {
-        return "Please enter a valid 12th passing year.";
+      if (studentType === "School Student") {
+        const cls = Number(v);
+        if (!Number.isInteger(cls) || cls < 1 || cls > 12) {
+          return "Please enter a valid class (1-12).";
+        }
+      } else {
+        const year = Number(v);
+        const now = new Date().getFullYear();
+        if (!Number.isInteger(year) || year < 1990 || year > now + 6) {
+          return "Please enter a valid 12th passing year.";
+        }
       }
       break;
     }
@@ -51,11 +70,13 @@ function validateField(field, value) {
 export default function RegistrationForm() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [values, setValues] = useState({});
+  const [values, setValues] = useState({ studentType: "" });
   const [error, setError] = useState("");
   const [ticketId, setTicketId] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState(null);
   const [results, setResults] = useState(null);
+
+  const studentType = values.studentType || "";
 
   const handleChange = (field, val) => {
     setValues((v) => ({ ...v, [field]: val }));
@@ -68,13 +89,13 @@ export default function RegistrationForm() {
     // every field is mandatory
     const missing = config.registration.fields.filter((f) => !values[f]?.trim());
     if (missing.length) {
-      setError(`Please fill in ${fieldLabels[missing[0]].toLowerCase()}.`);
+      setError(`Please fill in ${getFieldLabel(missing[0], studentType).toLowerCase()}.`);
       return;
     }
 
     // then check each field's format
     for (const field of config.registration.fields) {
-      const err = validateField(field, values[field]);
+      const err = validateField(field, values[field], studentType);
       if (err) {
         setError(err);
         return;
@@ -119,6 +140,16 @@ export default function RegistrationForm() {
   };
 
   if (!config.registration.enabled) return null;
+
+  const inputStyle = {
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.14)",
+    borderRadius: 12,
+    padding: "16px 18px",
+    color: "var(--text)",
+    fontSize: 15,
+    fontFamily: "var(--font-body)",
+  };
 
   return (
     <div
@@ -198,25 +229,48 @@ export default function RegistrationForm() {
           </h2>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-            {config.registration.fields.map((field) => (
-              <input
-                key={field}
-                type={fieldTypes[field] || "text"}
-                required
-                placeholder={fieldLabels[field] || field}
-                value={values[field] || ""}
-                onChange={(e) => handleChange(field, e.target.value)}
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.14)",
-                  borderRadius: 12,
-                  padding: "16px 18px",
-                  color: "var(--text)",
-                  fontSize: 15,
-                  fontFamily: "var(--font-body)",
-                }}
-              />
-            ))}
+            {config.registration.fields.map((field) => {
+              if (field === "studentType") {
+                return (
+                  <div key={field} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <label
+                      htmlFor="studentType"
+                      style={{ fontSize: 13, color: "var(--text-muted)", letterSpacing: "0.02em" }}
+                    >
+                      School or College?
+                    </label>
+                    <select
+                      id="studentType"
+                      required
+                      value={values.studentType || ""}
+                      onChange={(e) => handleChange("studentType", e.target.value)}
+                      style={{ ...inputStyle, cursor: "pointer" }}
+                    >
+                      <option value="" disabled style={{ color: "#000" }}>
+                        Select one
+                      </option>
+                      {studentTypeOptions.map((opt) => (
+                        <option key={opt} value={opt} style={{ color: "#000" }}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              }
+
+              return (
+                <input
+                  key={field}
+                  type={fieldTypes[field] || "text"}
+                  required
+                  placeholder={getFieldLabel(field, studentType)}
+                  value={values[field] || ""}
+                  onChange={(e) => handleChange(field, e.target.value)}
+                  style={inputStyle}
+                />
+              );
+            })}
 
             {error && <p style={{ color: "var(--accent-1)", fontSize: 13 }}>{error}</p>}
 

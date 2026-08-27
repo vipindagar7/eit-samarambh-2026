@@ -8,10 +8,16 @@ gsap.registerPlugin(ScrollTrigger);
 
 const MAIN_IMG = "/images/artist-main.jpg";
 
-// floating accent photos on the image itself — top corners only, so they
-// never collide with the text overlay anchored at the bottom. The two small
-// ones sit side by side beneath the white-clothes photo (top-left cluster).
-const thumbFiles = ["collage-1.jpg", "collage-2.jpg", "collage-3.jpg", "collage-4.jpg"];
+// two accent photos float on the left, two on the right — each with its
+// own distinct entrance animation
+const leftThumbs = [
+  { file: "collage-1.jpg", anim: "slideLeft" },
+  { file: "collage-2.jpg", anim: "flip" },
+];
+const rightThumbs = [
+  { file: "collage-3.jpg", anim: "zoomSpin" },
+  { file: "collage-4.jpg", anim: "slideRight" },
+];
 
 const animFrom = {
   slideLeft: { x: -140, opacity: 0, rotate: -20 },
@@ -19,6 +25,55 @@ const animFrom = {
   flip: { rotateY: 100, opacity: 0, scale: 0.7 },
   zoomSpin: { scale: 0.2, opacity: 0, rotate: -60 },
 };
+
+function ThumbGroup({ side, items, loadedThumbs }) {
+  return (
+    <div
+      className={`collage-group collage-group-${side}`}
+      style={{
+        position: "absolute",
+        top: "8%",
+        [side]: "4%",
+        zIndex: 2,
+        display: "flex",
+        flexDirection: "column",
+        gap: "min(3vw, 24px)",
+      }}
+    >
+      {items.map((t) => (
+        <div
+          key={t.file}
+          className="collage-thumb"
+          data-anim={t.anim}
+          style={{
+            width: "min(13vw, 130px)",
+            aspectRatio: "3 / 4",
+            borderRadius: 16,
+            overflow: "hidden",
+            border: "3px solid var(--bg)",
+            boxShadow: "0 20px 40px -20px rgba(0,0,0,0.6)",
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
+        >
+          <img
+            src={`/images/${t.file}`}
+            alt=""
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center top",
+              display: "block",
+              opacity: loadedThumbs[t.file] ? 1 : 0,
+              transition: "opacity 0.3s",
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function ArtistCollage({ children }) {
   const wrapRef = useRef(null);
@@ -30,10 +85,10 @@ export default function ArtistCollage({ children }) {
     img.onload = () => setMainLoaded(true);
     img.src = MAIN_IMG;
 
-    thumbFiles.forEach((file) => {
+    [...leftThumbs, ...rightThumbs].forEach((t) => {
       const ti = new Image();
-      ti.onload = () => setLoadedThumbs((l) => ({ ...l, [file]: true }));
-      ti.src = `/images/${file}`;
+      ti.onload = () => setLoadedThumbs((l) => ({ ...l, [t.file]: true }));
+      ti.src = `/images/${t.file}`;
     });
   }, []);
 
@@ -65,8 +120,9 @@ export default function ArtistCollage({ children }) {
           }
         );
 
+        // continuous floating drift
         gsap.to(thumb, {
-          y: i % 2 === 0 ? -10 : 10,
+          y: i % 2 === 0 ? -14 : 14,
           duration: 3 + i * 0.4,
           yoyo: true,
           repeat: -1,
@@ -88,6 +144,7 @@ export default function ArtistCollage({ children }) {
   return (
     <div
       ref={wrapRef}
+      className="collage-wrap"
       style={{
         position: "relative",
         width: "100vw",
@@ -104,8 +161,8 @@ export default function ArtistCollage({ children }) {
           style={{
             width: "100%",
             height: "100%",
-            objectFit: "cover",
-            objectPosition: "center 20%",
+            objectFit: "contain",
+            objectPosition: "center top",
             display: "block",
             opacity: mainLoaded ? 1 : 0,
             transition: "opacity 0.3s",
@@ -116,127 +173,44 @@ export default function ArtistCollage({ children }) {
             position: "absolute",
             inset: 0,
             background:
-              "linear-gradient(to top, var(--bg) 0%, rgba(26,11,46,0.75) 30%, rgba(26,11,46,0.15) 55%, transparent 75%)",
+              "linear-gradient(to top, var(--bg) 0%, var(--bg) 15%, rgba(26,11,46,0.85) 42%, rgba(26,11,46,0.3) 65%, transparent 85%)",
           }}
         />
       </div>
 
-      <div
-        className="collage-cluster"
-        style={{
-          position: "absolute",
-          top: "6%",
-          left: "4%",
-          zIndex: 2,
-          display: "flex",
-          flexDirection: "column",
-          gap: 10,
-        }}
-      >
-        <div
-          className="collage-thumb"
-          data-anim="slideLeft"
-          style={{
-            width: "min(22vw, 190px)",
-            aspectRatio: "3 / 4",
-            borderRadius: 18,
-            overflow: "hidden",
-            border: "3px solid var(--bg)",
-            boxShadow: "0 20px 40px -20px rgba(0,0,0,0.6)",
-            cursor: "pointer",
-          }}
-        >
-          <img
-            src="/images/collage-1.jpg"
-            alt=""
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-              opacity: loadedThumbs["collage-1.jpg"] ? 1 : 0,
-              transition: "opacity 0.3s",
-            }}
-          />
-        </div>
-
-        <div style={{ display: "flex", gap: 10 }}>
-          {["collage-3.jpg", "collage-4.jpg"].map((file, i) => (
-            <div
-              key={file}
-              className="collage-thumb"
-              data-anim={i === 0 ? "flip" : "zoomSpin"}
-              style={{
-                width: "min(10.5vw, 90px)",
-                aspectRatio: "1 / 1",
-                borderRadius: 12,
-                overflow: "hidden",
-                border: "2px solid var(--bg)",
-                boxShadow: "0 12px 24px -14px rgba(0,0,0,0.6)",
-                cursor: "pointer",
-              }}
-            >
-              <img
-                src={`/images/${file}`}
-                alt=""
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                  opacity: loadedThumbs[file] ? 1 : 0,
-                  transition: "opacity 0.3s",
-                }}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div
-        className="collage-thumb"
-        data-anim="slideRight"
-        style={{
-          position: "absolute",
-          top: "6%",
-          right: "4%",
-          width: "min(22vw, 190px)",
-          aspectRatio: "3 / 4",
-          borderRadius: 18,
-          overflow: "hidden",
-          border: "3px solid var(--bg)",
-          boxShadow: "0 20px 40px -20px rgba(0,0,0,0.6)",
-          zIndex: 2,
-          cursor: "pointer",
-        }}
-      >
-        <img
-          src="/images/collage-2.jpg"
-          alt=""
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            display: "block",
-            opacity: loadedThumbs["collage-2.jpg"] ? 1 : 0,
-            transition: "opacity 0.3s",
-          }}
-        />
-      </div>
+      <ThumbGroup side="left" items={leftThumbs} loadedThumbs={loadedThumbs} />
+      <ThumbGroup side="right" items={rightThumbs} loadedThumbs={loadedThumbs} />
 
       {children && (
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 5,
-            padding: "0 8vw 56px",
-          }}
-        >
-          {children}
-        </div>
+        <>
+          <div
+            className="text-overlay-fade"
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: "45%",
+              zIndex: 4,
+              background:
+                "linear-gradient(to top, var(--bg) 0%, rgba(26,11,46,0.9) 45%, transparent 100%)",
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            className="artist-text-overlay"
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 5,
+              padding: "0 8vw 56px",
+            }}
+          >
+            {children}
+          </div>
+        </>
       )}
     </div>
   );

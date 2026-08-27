@@ -200,8 +200,47 @@ footer.section {
 }
 
 @media (max-width: 640px) {
-  .collage-cluster,
-  .collage-thumb[data-anim="slideRight"] {
+  .collage-group-left,
+  .collage-group-right {
+    top: 5% !important;
+  }
+
+  .collage-group-left .collage-thumb,
+  .collage-group-right .collage-thumb {
+    width: min(15vw, 78px) !important;
+  }
+
+  .collage-wrap {
+    height: auto !important;
+    min-height: auto !important;
+  }
+
+  .collage-main {
+    position: relative !important;
+    inset: auto !important;
+    height: 72vh !important;
+    width: 100% !important;
+  }
+
+  .collage-main img {
+    object-fit: cover !important;
+    object-position: center top !important;
+  }
+
+  .text-overlay-fade {
     display: none !important;
+  }
+
+  .artist-text-overlay {
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    margin-top: -32vh;
+    padding: 28px 6vw 40px !important;
+    background: rgba(26, 11, 46, 0.55);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 28px 28px 0 0;
   }
 }

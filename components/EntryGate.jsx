@@ -79,7 +79,7 @@ export default function EntryGate() {
           marginBottom: 16,
         }}
       >
-        {config.fest.collegeShort}
+        {config.fest.college}
       </p>
       {hasLogoSamarambh ? (
         <div>
@@ -88,7 +88,7 @@ export default function EntryGate() {
             alt={config.fest.collegeShort}
             style={{
               width: 664,
-              height:"auto",
+              height: "auto",
               objectFit: "contain",
               flexShrink: 0,
             }}
@@ -108,6 +108,16 @@ export default function EntryGate() {
         </h1>
       )
       }
+      <h2
+        style={{
+          letterSpacing: "0.25em",
+          textTransform: "uppercase",
+          color: "var(--accent-2)",
+          marginBottom: 16,
+        }}
+      >
+        2k26
+      </h2>
 
       <div
         style={{
