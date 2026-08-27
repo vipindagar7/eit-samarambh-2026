@@ -4,14 +4,14 @@ import { useState } from "react";
 import config from "@/lib/config";
 import Magnetic from "./Magnetic";
 
-const studentTypeOptions = ["College Student", "School Student", "Just Passed School", "Others"];
+const studentTypeOptions = ["College Student", "School Student"];
 
 // Some labels/placeholders change depending on whether "studentType" is
 // School or College — keeping the same field keys (college, passingYear)
 // so the backend/sheet schema doesn't need two separate shapes.
 function getFieldLabel(field, studentType) {
   if (field === "college") {
-    return studentType === "School Student" ? "School name" : "Institute";
+    return studentType === "School Student" ? "School name" : "Institute name";
   }
   if (field === "passingYear") {
     return studentType === "School Student" ? "Class" : "12th passing year";
@@ -225,7 +225,7 @@ export default function RegistrationForm() {
               marginBottom: 32,
             }}
           >
-            Get your e-pass
+            Get your E-Pass
           </h2>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>

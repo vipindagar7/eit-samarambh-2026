@@ -70,9 +70,8 @@ export default function EntryGate() {
         padding: 24,
       }}
     >
-      <p
+      <h1
         style={{
-          fontSize: 12,
           letterSpacing: "0.25em",
           textTransform: "uppercase",
           color: "var(--accent-2)",
@@ -80,7 +79,7 @@ export default function EntryGate() {
         }}
       >
         {config.fest.college}
-      </p>
+      </h1>
       {hasLogoSamarambh ? (
         <div>
           <img
@@ -110,6 +109,7 @@ export default function EntryGate() {
       }
       <h2
         style={{
+          fontSize:"7rem",
           letterSpacing: "0.25em",
           textTransform: "uppercase",
           color: "var(--accent-2)",
@@ -131,7 +131,7 @@ export default function EntryGate() {
           letterSpacing: "0.05em",
         }}
       >
-        Tap to enter
+        Swipe up
       </div>
     </div>
   );

@@ -119,7 +119,7 @@ export default function LuckyTicket() {
               marginBottom: 16,
             }}
           >
-            You've unlocked an entry pass
+            You've unlocked an E-Pass
           </p>
           <p
             style={{
@@ -142,7 +142,7 @@ export default function LuckyTicket() {
               className="btn"
               style={{ background: "var(--bg)", color: "var(--text)" }}
             >
-              Claim &amp; register →
+              Claim &amp; register for E-Pass →
             </button>
           </div>
         </div>

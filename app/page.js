@@ -19,6 +19,7 @@ import Coordinators from "@/components/Coordinators";
 import Sponsors from "@/components/Sponsors";
 import ContactUs from "@/components/ContactUs";
 import LuckyTicket from "@/components/LuckyTicket";
+import MarketingHype from "@/components/MarketingHype";
 import Footer from "@/components/Footer";
 
 gsap.registerPlugin(ScrollTrigger);

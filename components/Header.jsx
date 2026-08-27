@@ -59,7 +59,7 @@ export default function Header() {
         className="btn header-get-pass"
         style={{ padding: "10px 22px", fontSize: 14 }}
       >
-        Get pass
+        Get E-Pass
       </button>
     </header>
   );

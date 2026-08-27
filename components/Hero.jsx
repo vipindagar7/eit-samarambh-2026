@@ -214,114 +214,124 @@ export default function Hero() {
           transformOrigin: "center center",
         }}
       >
-      <div ref={blobRef} style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
-        <Blobs variant="hero" />
-      </div>
-
-      <div
-        ref={previewRef}
-        style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 0,
-          overflow: "hidden",
-          opacity: 0,
-        }}
-      >
-        <img
-          src="/images/artist-main.jpg"
-          alt=""
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "center 20%",
-            display: "block",
-          }}
-        />
-      </div>
-
-      <div style={{ position: "relative", zIndex: 1 }}>
-        <p className="eyebrow" style={{ marginBottom: 20 }}>
-          {config.fest.collegeShort} presents
-        </p>
-
-        <h1
-          ref={titleRef}
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "clamp(3.2rem, 13vw, 9.5rem)",
-            lineHeight: 0.9,
-            display: "flex",
-            flexWrap: "wrap",
-          }}
-        >
-          {name.map((c, i) => (
-            <span
-              key={i}
-              className="char"
-              style={{
-                display: "inline-block",
-                color: i % 3 === 1 ? "var(--accent-1)" : "var(--text)",
-              }}
-            >
-              {c}
-            </span>
-          ))}
-        </h1>
-
-        <p
-          className="hero-sub"
-          style={{
-            fontSize: "clamp(1.1rem, 2.4vw, 1.6rem)",
-            color: "var(--text-muted)",
-            marginTop: 24,
-            maxWidth: 560,
-          }}
-        >
-          {config.artist.name} live in concert &mdash; {config.fest.date}, {config.fest.time}
-        </p>
+        <div ref={blobRef} style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+          <Blobs variant="hero" />
+        </div>
 
         <div
-          className="hero-countdown"
-          style={{ display: "flex", gap: "28px", marginTop: 48, flexWrap: "wrap" }}
+          ref={previewRef}
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 0,
+            overflow: "hidden",
+            opacity: 0,
+          }}
         >
-          {[
-            ["Days", time.d],
-            ["Hours", time.h],
-            ["Mins", time.m],
-            ["Secs", time.s],
-          ].map(([label, val]) => (
-            <div key={label} style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  fontFamily: "var(--font-display)",
-                  fontSize: "clamp(2rem, 5vw, 3.2rem)",
-                  color: "var(--accent-2)",
-                  lineHeight: 1,
-                }}
-              >
-                {String(val).padStart(2, "0")}
-              </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  letterSpacing: "0.15em",
-                  textTransform: "uppercase",
-                  color: "var(--text-muted)",
-                  marginTop: 6,
-                }}
-              >
-                {label}
-              </div>
-            </div>
-          ))}
+          <img
+            src="/images/artist-main.jpg"
+            alt=""
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center 20%",
+              display: "block",
+            }}
+          />
         </div>
-      </div>
 
-      <div style={{ position: "relative", zIndex: 1 }} className="hero-visual">
-        <HeroVisual />
-      </div>
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <p className="eyebrow" style={{ marginBottom: 20 }}>
+            {config.fest.collegeShort} presents
+          </p>
+
+          <h1
+            ref={titleRef}
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(3.2rem, 13vw, 9.5rem)",
+              lineHeight: 0.9,
+              display: "flex",
+              flexWrap: "wrap",
+            }}
+          >
+            {name.map((c, i) => (
+              <span
+                key={i}
+                className="char"
+                style={{
+                  display: "inline-block",
+                  color: i % 3 === 1 ? "var(--accent-1)" : "var(--text)",
+                }}
+              >
+                {c}
+              </span>
+            ))}
+          </h1>
+
+          <p
+            className="hero-sub"
+            style={{
+              fontSize: "clamp(1.1rem, 2.4vw, 1.6rem)",
+              color: "var(--text-muted)",
+              marginTop: 24,
+              maxWidth: 560,
+            }}
+          >
+            {config.artist.name} live in concert &mdash;
+          </p>
+          <p
+            className="hero-sub"
+            style={{
+              fontSize: "clamp(1.1rem, 2.4vw, 1.6rem)",
+              color: "var(--text-muted)",
+              marginTop: 24,
+              maxWidth: 560,
+            }}
+          >
+            {config.fest.date}, {config.fest.time}        </p>
+
+          <div
+            className="hero-countdown"
+            style={{ display: "flex", gap: "28px", marginTop: 48, flexWrap: "wrap" }}
+          >
+            {[
+              ["Days", time.d],
+              ["Hours", time.h],
+              ["Mins", time.m],
+              ["Secs", time.s],
+            ].map(([label, val]) => (
+              <div key={label} style={{ textAlign: "center" }}>
+                <div
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: "clamp(2rem, 5vw, 3.2rem)",
+                    color: "var(--accent-2)",
+                    lineHeight: 1,
+                  }}
+                >
+                  {String(val).padStart(2, "0")}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    letterSpacing: "0.15em",
+                    textTransform: "uppercase",
+                    color: "var(--text-muted)",
+                    marginTop: 6,
+                  }}
+                >
+                  {label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ position: "relative", zIndex: 1 }} className="hero-visual">
+          <HeroVisual />
+        </div>
       </div>
 
       <div
