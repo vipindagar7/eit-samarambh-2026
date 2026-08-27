@@ -4,8 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import config from "@/lib/config";
 import Magnetic from "./Magnetic";
 
-const studentTypeOptions = ["College Student", "School Student"];
+const studentTypeOptions = ["College Student", "School Student", "Others"];
 
+// Some labels/placeholders change depending on whether "studentType" is
+// School or College — keeping the same field keys (college, passingYear)
+// so the backend/sheet schema doesn't need two separate shapes.
 function getFieldLabel(field, studentType) {
   if (field === "college") {
     return studentType === "School Student" ? "School name" : "Institute name";
@@ -18,8 +21,16 @@ function getFieldLabel(field, studentType) {
     name: "Full name",
     email: "Email address",
     phone: "Phone number",
+    profession: "Profession",
+    transport: "Transport pickup",
   };
   return labels[field] || field;
+}
+
+// Which set of fields to show, based on the chosen category — "Others"
+// swaps institute/passing-year for a profession field instead.
+function activeFields(studentType) {
+  return studentType === "Others" ? config.registration.otherFields : config.registration.fields;
 }
 
 const fieldTypes = {
@@ -110,13 +121,14 @@ export default function RegistrationForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const missing = config.registration.fields.filter((f) => !values[f]?.trim());
+    const fields = activeFields(studentType);
+    const missing = fields.filter((f) => !values[f]?.trim());
     if (missing.length) {
       setError(`Please fill in ${getFieldLabel(missing[0], studentType).toLowerCase()}.`);
       return;
     }
 
-    for (const field of config.registration.fields) {
+    for (const field of fields) {
       const err = validateField(field, values[field], studentType);
       if (err) {
         setError(err);
@@ -349,7 +361,7 @@ export default function RegistrationForm() {
           </h2>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-            {config.registration.fields.map((field) => {
+            {activeFields(studentType).map((field) => {
               if (field === "studentType") {
                 return (
                   <div key={field} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -380,6 +392,38 @@ export default function RegistrationForm() {
               }
 
               if (!studentType) return null;
+
+              if (field === "transport") {
+                return (
+                  <div key={field} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <label
+                      htmlFor="transport"
+                      style={{ fontSize: 13, color: "var(--text-muted)", letterSpacing: "0.02em" }}
+                    >
+                      Need transport?
+                    </label>
+                    <select
+                      id="transport"
+                      required
+                      value={values.transport || ""}
+                      onChange={(e) => handleChange("transport", e.target.value)}
+                      style={{ ...inputStyle, cursor: "pointer" }}
+                    >
+                      <option value="" disabled style={{ color: "#000" }}>
+                        Select one
+                      </option>
+                      <option value="No transport needed" style={{ color: "#000" }}>
+                        No transport needed
+                      </option>
+                      {config.registration.transportStations.map((station) => (
+                        <option key={station} value={station} style={{ color: "#000" }}>
+                          {station}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              }
 
               return (
                 <input

@@ -15,9 +15,18 @@ export async function POST(request) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { studentType, name, email, phone, college, passingYear } = body || {};
+  const { studentType, name, email, phone, college, passingYear, profession, transport } = body || {};
 
-  if (!studentType || !name || !email || !phone || !college || !passingYear) {
+  const isOther = studentType === "Others";
+
+  if (
+    !studentType ||
+    !name ||
+    !email ||
+    !phone ||
+    !transport ||
+    (isOther ? !profession : !college || !passingYear)
+  ) {
     return NextResponse.json({ error: "All fields are required" }, { status: 400 });
   }
 
@@ -26,8 +35,10 @@ export async function POST(request) {
     name: String(name).trim(),
     email: String(email).trim().toLowerCase(),
     phone: String(phone).trim(),
-    college: String(college).trim(),
-    passingYear: String(passingYear).trim(),
+    college: isOther ? "" : String(college).trim(),
+    passingYear: isOther ? "" : String(passingYear).trim(),
+    profession: isOther ? String(profession).trim() : "",
+    transport: String(transport).trim(),
   };
 
   // Check for an already-registered email/phone BEFORE sending any OTP —
