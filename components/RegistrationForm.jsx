@@ -6,12 +6,9 @@ import Magnetic from "./Magnetic";
 
 const studentTypeOptions = ["College Student", "School Student"];
 
-// Some labels/placeholders change depending on whether "studentType" is
-// School or College — keeping the same field keys (college, passingYear)
-// so the backend/sheet schema doesn't need two separate shapes.
 function getFieldLabel(field, studentType) {
   if (field === "college") {
-    return studentType === "School Student" ? "School name" : "Institute Name";
+    return studentType === "School Student" ? "School name" : "Institute name";
   }
   if (field === "passingYear") {
     return studentType === "School Student" ? "Class" : "12th passing year";
@@ -226,20 +223,30 @@ export default function RegistrationForm() {
     }
   };
 
-  const giveUp = async () => {
+  const proceedWithoutOtp = async () => {
     setSubmitting(true);
+    setError("");
     try {
-      await fetch("/api/otp/give-up", {
+      const res = await fetch("/api/otp/skip", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: otpToken }),
       });
-    } catch {
-      // best-effort — show the give-up screen regardless
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || "Couldn't complete registration. Please try again.");
+      }
+
+      setTicketId(data.ticketId || null);
+      setQrDataUrl(data.qrDataUrl || null);
+      setResults(data);
+      setStage("done");
+      clearInterval(timerRef.current);
+    } catch (err) {
+      setError(err.message || "Couldn't complete registration right now.");
     } finally {
       setSubmitting(false);
-      setStage("gave-up");
-      clearInterval(timerRef.current);
     }
   };
 
@@ -325,29 +332,6 @@ export default function RegistrationForm() {
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {stage === "gave-up" && (
-        <div style={{ textAlign: "center", padding: "20px 0" }}>
-          <p
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "1.6rem",
-              marginBottom: 16,
-              color: "var(--accent-2)",
-            }}
-          >
-            We couldn't verify you automatically
-          </p>
-          <p style={{ color: "var(--text-muted)", marginBottom: 16, lineHeight: 1.6 }}>
-            Our team has been notified with your details and will reach out shortly. You can also
-            email us directly at{" "}
-            <a href={`mailto:${config.contact.email}`} style={{ color: "var(--accent-2)" }}>
-              {config.contact.email}
-            </a>
-            .
-          </p>
         </div>
       )}
 
@@ -487,9 +471,14 @@ export default function RegistrationForm() {
             {secondsLeft > 0 ? (
               <p>Didn't get it? You can try another option in {secondsLeft}s.</p>
             ) : noAttemptsLeftAnywhere ? (
-              <button onClick={giveUp} className="btn btn-outline" style={{ marginTop: 8 }}>
-                I still haven't received it
-              </button>
+              <Magnetic
+                as="button"
+                onClick={proceedWithoutOtp}
+                className="btn btn-outline"
+                style={{ marginTop: 8, opacity: submitting ? 0.7 : 1, pointerEvents: submitting ? "none" : "auto" }}
+              >
+                {submitting ? "Registering…" : "Continue without verification"}
+              </Magnetic>
             ) : (
               <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 8 }}>
                 {attemptsLeft.mobile > 0 && (
