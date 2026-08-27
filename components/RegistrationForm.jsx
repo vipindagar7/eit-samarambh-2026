@@ -225,7 +225,7 @@ export default function RegistrationForm() {
               marginBottom: 32,
             }}
           >
-            Get your pass
+            Get your e-pass
           </h2>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
