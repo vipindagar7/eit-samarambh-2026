@@ -400,7 +400,7 @@ export default function RegistrationForm() {
                       htmlFor="transport"
                       style={{ fontSize: 13, color: "var(--text-muted)", letterSpacing: "0.02em" }}
                     >
-                      Need transport then select your nearest metro station?
+                      Need free transport then select your nearest metro station?
                     </label>
                     <select
                       id="transport"
