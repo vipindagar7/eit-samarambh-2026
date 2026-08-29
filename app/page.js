@@ -19,7 +19,8 @@ import Coordinators from "@/components/Coordinators";
 import Sponsors from "@/components/Sponsors";
 import ContactUs from "@/components/ContactUs";
 import LuckyTicket from "@/components/LuckyTicket";
-import MarketingHype from "@/components/MarketingHype";
+import TransportInfo from "@/components/TransportInfo";
+import TransportPopup from "@/components/TransportPopup";
 import Footer from "@/components/Footer";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -96,6 +97,7 @@ export default function Home() {
       <CursorGlow />
       <Particles />
       <MusicNotice />
+      <TransportPopup />
       <Header />
       <Hero />
       <ArtistReveal />
@@ -106,6 +108,7 @@ export default function Home() {
       <Sponsors />
       <ContactUs />
       <LuckyTicket />
+      <TransportInfo />
       <Footer />
       <MusicPlayer />
     </MusicProvider>
